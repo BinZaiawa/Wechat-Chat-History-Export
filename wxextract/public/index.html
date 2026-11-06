@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>微信聊天记录导出</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- 顶部工具栏 -->
+<div class="topbar">
+  <div class="tb-left">
+    <span class="app-icon">💬</span>
+    <span class="app-title">微信聊天记录</span>
+  </div>
+  <div class="tb-right">
+    <span id="busyDot" class="dot idle"></span>
+    <span id="busyText" class="tb-status">就绪</span>
+    <button id="btnTheme" class="icon-btn" title="切换深浅色">
+      <span class="theme-icon">🌙</span>
+    </button>
+    <button id="btnSettings" class="icon-btn" title="设置">⚙</button>
+    <button id="btnLog" class="icon-btn" title="日志">📋</button>
+  </div>
+</div>
+
+<!-- 主体：三栏 -->
+<div class="app">
+
+  <!-- 左：账号 + 会话列表 -->
+  <aside class="sidebar">
+    <div class="side-head">
+      <select id="selAccount" class="acc-select">
+        <option value="">— 检测中 —</option>
+      </select>
+      <button id="btnReload" class="icon-btn sm" title="刷新">↻</button>
+    </div>
+
+    <div class="side-actions">
+      <button id="btnDecrypt" class="mini-btn">解密数据库</button>
+    </div>
+
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input id="inpSearch" class="search-input" type="text" placeholder="搜索会话">
+    </div>
+
+    <div id="chatList" class="chat-list">
+      <div class="empty">请先解密数据库</div>
+    </div>
+  </aside>
+
+  <!-- 中：聊天气泡 -->
+  <main class="chatarea">
+    <div class="chat-head">
+      <div class="ch-left">
+        <h2 id="chatTitle">未选择会话</h2>
+        <span id="chatMeta" class="ch-meta"></span>
+      </div>
+      <div class="ch-right">
+        <button id="btnSelAll" class="mini-btn ghost">全选</button>
+        <button id="btnSelNone" class="mini-btn ghost">清空</button>
+        <button id="btnSelInvert" class="mini-btn ghost">反选</button>
+        <span id="selCount" class="sel-badge">已选 0</span>
+      </div>
+    </div>
+
+    <div id="bubbles" class="bubbles">
+      <div class="empty big">← 从左侧选择一个会话</div>
+    </div>
+
+    <div class="exportbar">
+      <div class="eb-left">
+        <select id="selScope" class="mini-select">
+          <option value="selected">仅导出勾选</option>
+          <option value="all">全部消息</option>
+          <option value="date">按日期</option>
+        </select>
+        <span id="dateRange" class="date-range" style="display:none">
+          <input id="inpSince" type="date" class="mini-input">
+          <span>~</span>
+          <input id="inpUntil" type="date" class="mini-input">
+        </span>
+        <select id="selFormat" class="mini-select">
+          <option value="html">HTML</option>
+          <option value="md">Markdown</option>
+          <option value="txt">TXT</option>
+          <option value="json">JSON</option>
+          <option value="csv">CSV</option>
+        </select>
+      </div>
+      <div class="eb-right">
+        <button id="btnExport" class="primary-btn">导出</button>
+        <button id="btnOpenDir" class="mini-btn ghost">打开目录</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 设置抽屉 -->
+<div id="drawerSettings" class="drawer">
+  <div class="drawer-head">
+    <h3>设置</h3>
+    <button class="icon-btn" data-close="drawerSettings">✕</button>
+  </div>
+  <div class="drawer-body">
+    <label class="fl">输出目录</label>
+    <input id="inpOutDir" class="full-input" type="text" placeholder="留空使用默认 exports">
+
+    <label class="fl">密钥状态</label>
+    <div id="keyInfo" class="info-box">加载中…</div>
+
+    <label class="fl">高级：手动 passphrase</label>
+    <input id="inpPass" class="full-input" type="text" placeholder="64 位 hex（可选）">
+    <button id="btnDerive" class="mini-btn" style="margin-top:8px">派生密钥</button>
+    <div id="deriveResult" class="hint"></div>
+
+    <div class="hint-box">
+      <p><b>密钥提取</b>需要以管理员身份运行根目录的：</p>
+      <ul>
+        <li><code>提取密钥.bat</code> — 常规提取</li>
+        <li><code>重启并抓取.bat</code> — 补齐缺失的库</li>
+      </ul>
+      <p>微信 4.1.10+ 不再在内存常驻密钥，必须在启动瞬间抓取。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 日志抽屉 -->
+<div id="drawerLog" class="drawer">
+  <div class="drawer-head">
+    <h3>运行日志</h3>
+    <div>
+      <button id="btnClearLog" class="icon-btn" title="清空">🗑</button>
+      <button class="icon-btn" data-close="drawerLog">✕</button>
+    </div>
+  </div>
+  <pre id="logBox" class="logbox"></pre>
+</div>
+
+<div id="mask" class="mask"></div>
+<div id="toast" class="toast"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

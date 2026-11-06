@@ -1,0 +1,27 @@
+{
+  "name": "wechat-chat-export",
+  "version": "1.0.0",
+  "description": "微信 4.x 聊天记录导出工具 — 本地解密、仿微信界面、勾选导出",
+  "main": "wxextract/server.js",
+  "scripts": {
+    "start": "node wxextract/server.js",
+    "cli": "node wxextract/cli.js",
+    "keys": "node wxextract/tools/extract_key.js",
+    "apply": "node wxextract/tools/apply_keys.js",
+    "test": "node wxextract/tools/crosscheck.js"
+  },
+  "keywords": [
+    "wechat",
+    "chat",
+    "export",
+    "sqlcipher",
+    "backup"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "optionalDependencies": {
+    "koffi": "^3.1.1"
+  }
+}
