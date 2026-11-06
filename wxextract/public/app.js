@@ -42,9 +42,20 @@ function toast(msg, type) {
   el.textContent = msg;
   el.className = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(toastTimer);
+
+  // 长消息（多行 / 超过 60 字）停留更久，方便阅读
+  const isLong = msg.includes('\n') || msg.length > 60;
+  const dur = isLong ? 12000 : (type === 'err' ? 6000 : 2800);
+
   toastTimer = setTimeout(() => {
     el.className = 'toast';
-  }, type === 'err' ? 5000 : 2800);
+  }, dur);
+
+  // 点击可立即关闭
+  el.onclick = () => {
+    clearTimeout(toastTimer);
+    el.className = 'toast';
+  };
 }
 
 function setBusy(busy, text) {
@@ -144,6 +155,27 @@ function selectAccount(idx) {
   const a = state.accounts[+idx];
   if (!a) return;
   state.currentAccount = a;
+
+  // 缺密钥提示（只提示有内容的库，0 字节空库忽略）
+  const real = a.missingReal || [];
+  const info = $('#accInfo');
+  if (info) {
+    if (real.length) {
+      info.className = 'hint err';
+      info.innerHTML =
+        `⚠ ${real.length} 个库缺密钥：` +
+        real.slice(0, 3).map((r) => `<b>${esc(r)}</b>`).join('、') +
+        (real.length > 3 ? ` 等 ${real.length} 个` : '') +
+        `<br>请以管理员身份运行「提取密钥.bat」补齐`;
+    } else if (a.dbTotal) {
+      info.className = 'hint ok';
+      info.textContent = `✅ 密钥齐全（${a.dbTotal} 个库）`;
+    } else {
+      info.className = 'hint';
+      info.textContent = '';
+    }
+  }
+
   loadChats();
 }
 
@@ -466,9 +498,31 @@ async function doDecrypt() {
       body: JSON.stringify({ accountPath: a.path }),
     });
     if (r.ok) {
+      const miss = r.missingKeys || [];
+      const real = r.realFailures || [];
+
       let msg = `解密完成：成功 ${r.decrypted} 个`;
       if (r.failed) msg += `，失败 ${r.failed} 个`;
-      toast(msg, r.decrypted > 0 ? 'ok' : 'err');
+
+      // 缺密钥的库，明确列出来并给出解决办法
+      if (miss.length) {
+        msg += `\n\n⚠ ${miss.length} 个库缺密钥：`;
+        miss.slice(0, 5).forEach((rel) => {
+          msg += `\n  · ${rel}`;
+        });
+        if (miss.length > 5) msg += `\n  · ... 还有 ${miss.length - 5} 个`;
+        msg += '\n\n解决办法：以管理员身份运行「提取密钥.bat」';
+      }
+
+      // 真失败（密钥对但解不开）
+      if (real.length) {
+        msg += `\n\n❌ ${real.length} 个库解密失败：`;
+        real.slice(0, 3).forEach((f) => {
+          msg += `\n  · ${f.rel}：${f.reason}`;
+        });
+      }
+
+      toast(msg, real.length ? 'err' : (miss.length ? '' : 'ok'));
       if (r.decrypted > 0) loadChats();
     } else {
       toast(r.err || '解密失败', 'err');

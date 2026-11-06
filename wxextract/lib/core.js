@@ -19,6 +19,24 @@ const state = {
   log: [],
 };
 
+/**
+ * 尝试获取互斥锁，防止并发执行重操作（解密 / 导出）。
+ * @returns {boolean} true 表示获取成功
+ */
+function acquire(task) {
+  if (state.busy) return false;
+  state.busy = true;
+  state.task = task || '';
+  state.progress = 0;
+  return true;
+}
+
+function release() {
+  state.busy = false;
+  state.task = '';
+  state.progress = 100;
+}
+
 function log(msg) {
   const line = `[${new Date().toLocaleTimeString('zh-CN', { hour12: false })}] ${msg}`;
   state.log.push(line);
@@ -109,7 +127,14 @@ function decryptAccount(cfg, accountPath, onLog) {
       log(`解密失败: ${db.rel} — ${e.message}`);
     }
   }
-  return { decrypted, failed, outRoot };
+  return {
+    decrypted,
+    failed,
+    outRoot,
+    // 明确区分：哪些是缺密钥（可补），哪些是真失败
+    missingKeys: failed.filter((f) => f.reason === '无密钥').map((f) => f.rel),
+    realFailures: failed.filter((f) => f.reason !== '无密钥'),
+  };
 }
 
 /**
@@ -387,7 +412,7 @@ function getAvatar(cfg, accountName, username) {
 }
 
 module.exports = {
-  state, log, setProgress,
+  state, log, setProgress, acquire, release,
   getAccounts, dbStorageOf, workDirOf, decryptedDir,
   decryptAccount, scanKeys, deriveKeysFromPassphrase,
   listChats, readChat,

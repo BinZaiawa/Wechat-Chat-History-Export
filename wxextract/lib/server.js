@@ -89,11 +89,27 @@ function createServer() {
 
       if (pathname === '/api/accounts' && req.method === 'GET') {
         const accounts = core.getAccounts(cfg);
-        // 附加解密状态
+        // 附加解密状态 + 密钥覆盖情况
         for (const a of accounts) {
           const wd = core.workDirOf(cfg, a.name);
           a.decrypted = fs.existsSync(wd);
           a.keyCount = Object.keys(cfg.keys || {}).length;
+
+          // 统计该账号下有多少库、多少有密钥
+          try {
+            const dbs = keysMod.collectDbs(a.dbStorage);
+            a.dbTotal = dbs.length;
+            const missing = dbs.filter((d) => !(cfg.keys || {})[d.rel]);
+            a.dbMissing = missing.length;
+            a.missingList = missing.map((d) => d.rel);
+            // 只把有内容的库算进去（0 字节空库忽略）
+            a.missingReal = missing.filter((d) => d.sizeMB > 0.01).map((d) => d.rel);
+          } catch (_) {
+            a.dbTotal = 0;
+            a.dbMissing = 0;
+            a.missingList = [];
+            a.missingReal = [];
+          }
         }
         return sendJson(res, 200, { ok: true, accounts });
       }
@@ -151,6 +167,9 @@ function createServer() {
         if (!body.accountPath) return sendJson(res, 400, { ok: false, err: '缺少 accountPath' });
         core.state.busy = true;
         core.setProgress(0, '解密中');
+        if (!core.acquire('解密中')) {
+          return sendJson(res, 200, { ok: false, err: '有任务正在执行，请稍候' });
+        }
         try {
           const r = core.decryptAccount(cfg, body.accountPath);
           return sendJson(res, 200, {
@@ -158,13 +177,14 @@ function createServer() {
             decrypted: r.decrypted.length,
             failed: r.failed.length,
             failedList: r.failed.slice(0, 50),
+            missingKeys: r.missingKeys || [],
+            realFailures: r.realFailures || [],
             outRoot: r.outRoot,
           });
         } catch (e) {
           return sendJson(res, 200, { ok: false, err: e.message });
         } finally {
-          core.state.busy = false;
-          core.setProgress(100, '');
+          core.release();
         }
       }
 
